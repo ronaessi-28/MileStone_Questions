@@ -1,0 +1,350 @@
+Below is ONE COMPLETE ANSWER containing
+✅ Question
+✅ Full Working Code (Entity → Repository → Service → Controller)
+No extra theory.
+
+
+---
+
+✅ QUESTION
+
+Build a Spring Boot REST application for an Online Education Platform using JPQL.
+
+Requirements:
+
+1. A Tutor can manage multiple Courses, but each Course is managed by only one Tutor.
+
+
+2. Implement One-to-Many and Many-to-One relationships between Tutor and Course.
+
+
+3. Use JPQL queries to fetch:
+
+Tutors by tutor name
+
+Courses by course name
+
+
+
+4. Implement CRUD operations using:
+
+Entity Layer
+
+Repository Layer
+
+Service Layer
+
+Controller Layer
+
+
+
+5. Prevent infinite recursion during JSON serialization.
+
+
+
+
+---
+
+✅ ANSWER (FULL CODE)
+
+
+---
+
+Entity Layer
+
+Tutor.java
+
+@Entity
+public class Tutor {
+
+    @Id
+    @GeneratedValue(strategy = GenerationType.IDENTITY)
+    private Long tutorId;
+
+    private String tutorName;
+    private String expertise;
+
+    @OneToMany(mappedBy = "tutor", cascade = CascadeType.ALL, orphanRemoval = true)
+    @JsonManagedReference
+    private List<Course> courses;
+
+    public Tutor() {}
+
+    public Long getTutorId() {
+        return tutorId;
+    }
+
+    public void setTutorId(Long tutorId) {
+        this.tutorId = tutorId;
+    }
+
+    public String getTutorName() {
+        return tutorName;
+    }
+
+    public void setTutorName(String tutorName) {
+        this.tutorName = tutorName;
+    }
+
+    public String getExpertise() {
+        return expertise;
+    }
+
+    public void setExpertise(String expertise) {
+        this.expertise = expertise;
+    }
+
+    public List<Course> getCourses() {
+        return courses;
+    }
+
+    public void setCourses(List<Course> courses) {
+        this.courses = courses;
+    }
+}
+
+
+---
+
+Course.java
+
+@Entity
+public class Course {
+
+    @Id
+    @GeneratedValue(strategy = GenerationType.IDENTITY)
+    private Long courseId;
+
+    private String courseName;
+    private String courseDescription;
+    private int studentsEnrolled;
+    private int lessonsCount;
+
+    @ManyToOne
+    @JoinColumn(name = "tutor_id")
+    @JsonBackReference
+    private Tutor tutor;
+
+    public Course() {}
+
+    public Long getCourseId() {
+        return courseId;
+    }
+
+    public void setCourseId(Long courseId) {
+        this.courseId = courseId;
+    }
+
+    public String getCourseName() {
+        return courseName;
+    }
+
+    public void setCourseName(String courseName) {
+        this.courseName = courseName;
+    }
+
+    public String getCourseDescription() {
+        return courseDescription;
+    }
+
+    public void setCourseDescription(String courseDescription) {
+        this.courseDescription = courseDescription;
+    }
+
+    public int getStudentsEnrolled() {
+        return studentsEnrolled;
+    }
+
+    public void setStudentsEnrolled(int studentsEnrolled) {
+        this.studentsEnrolled = studentsEnrolled;
+    }
+
+    public int getLessonsCount() {
+        return lessonsCount;
+    }
+
+    public void setLessonsCount(int lessonsCount) {
+        this.lessonsCount = lessonsCount;
+    }
+
+    public Tutor getTutor() {
+        return tutor;
+    }
+
+    public void setTutor(Tutor tutor) {
+        this.tutor = tutor;
+    }
+}
+
+
+---
+
+Repository Layer
+
+TutorRepository.java
+
+public interface TutorRepository extends JpaRepository<Tutor, Long> {
+
+    @Query("SELECT t FROM Tutor t WHERE t.tutorName = :tutorName")
+    List<Tutor> findAllByTutorName(@Param("tutorName") String tutorName);
+}
+
+
+---
+
+CourseRepository.java
+
+public interface CourseRepository extends JpaRepository<Course, Long> {
+
+    @Query("SELECT c FROM Course c WHERE c.courseName = :courseName")
+    List<Course> findAllByCourseName(@Param("courseName") String courseName);
+}
+
+
+---
+
+Service Layer
+
+TutorService.java
+
+@Service
+public class TutorService {
+
+    @Autowired
+    private TutorRepository tutorRepository;
+
+    public Tutor addTutor(Tutor tutor) {
+        return tutorRepository.save(tutor);
+    }
+
+    public List<Tutor> getAllTutors(String tutorName) {
+        return tutorRepository.findAllByTutorName(tutorName);
+    }
+
+    public Tutor updateTutor(Long tutorId, Tutor tutor) {
+        Optional<Tutor> existing = tutorRepository.findById(tutorId);
+        if (existing.isPresent()) {
+            Tutor t = existing.get();
+            t.setTutorName(tutor.getTutorName());
+            t.setExpertise(tutor.getExpertise());
+            return tutorRepository.save(t);
+        }
+        return null;
+    }
+
+    public void deleteTutor(Long tutorId) {
+        tutorRepository.deleteById(tutorId);
+    }
+}
+
+
+---
+
+CourseService.java
+
+@Service
+public class CourseService {
+
+    @Autowired
+    private CourseRepository courseRepository;
+
+    public Course addCourse(Course course) {
+        return courseRepository.save(course);
+    }
+
+    public List<Course> getCoursesByName(String courseName) {
+        return courseRepository.findAllByCourseName(courseName);
+    }
+
+    public Course updateCourse(Long courseId, Course course) {
+        Optional<Course> existing = courseRepository.findById(courseId);
+        if (existing.isPresent()) {
+            Course c = existing.get();
+            c.setCourseName(course.getCourseName());
+            c.setCourseDescription(course.getCourseDescription());
+            c.setStudentsEnrolled(course.getStudentsEnrolled());
+            c.setLessonsCount(course.getLessonsCount());
+            return courseRepository.save(c);
+        }
+        return null;
+    }
+
+    public void deleteCourse(Long courseId) {
+        courseRepository.deleteById(courseId);
+    }
+}
+
+
+---
+
+Controller Layer
+
+TutorController.java
+
+@RestController
+@RequestMapping("/api/tutors")
+public class TutorController {
+
+    @Autowired
+    private TutorService tutorService;
+
+    @PostMapping
+    public Tutor addTutor(@RequestBody Tutor tutor) {
+        return tutorService.addTutor(tutor);
+    }
+
+    @GetMapping
+    public List<Tutor> getTutors(@RequestParam String tutorName) {
+        return tutorService.getAllTutors(tutorName);
+    }
+
+    @PutMapping("/{id}")
+    public Tutor updateTutor(@PathVariable Long id,
+                             @RequestBody Tutor tutor) {
+        return tutorService.updateTutor(id, tutor);
+    }
+
+    @DeleteMapping("/{id}")
+    public void deleteTutor(@PathVariable Long id) {
+        tutorService.deleteTutor(id);
+    }
+}
+
+
+---
+
+CourseController.java
+
+@RestController
+@RequestMapping("/api/courses")
+public class CourseController {
+
+    @Autowired
+    private CourseService courseService;
+
+    @PostMapping
+    public Course addCourse(@RequestBody Course course) {
+        return courseService.addCourse(course);
+    }
+
+    @GetMapping
+    public List<Course> getCourses(@RequestParam String courseName) {
+        return courseService.getCoursesByName(courseName);
+    }
+
+    @PutMapping("/{id}")
+    public Course updateCourse(@PathVariable Long id,
+                               @RequestBody Course course) {
+        return courseService.updateCourse(id, course);
+    }
+
+    @DeleteMapping("/{id}")
+    public void deleteCourse(@PathVariable Long id) {
+        courseService.deleteCourse(id);
+    }
+}
+
+
+---
+
+If you want this converted into PDF / handwritten exam format / ResponseEntity version, just tell me 👍
