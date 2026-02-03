@@ -1,0 +1,124 @@
+Build education application using JPQL
+You are developing a Spring Boot application for an online education platform tailored for kids. This platform offers a variety of courses created and managed by tutors. Each tutor can have multiple courses, but each course is managed by one tutor.
+Entity Layer
+File: Tutor.java (Model Class)
+Variables:
+private Long tutorId;
+private String tutorName;
+private String expertise;
+private List<Course> courses;
+Description:
+Implement proper primary key and auto increment on tutorId.
+Establishes a One-to-Many relationship with Course:
+One tutor can handle multiple courses.
+Mapped by name "tutor".
+Implement orphanRemoval.
+Uses proper annotation to avoid infinite recursion during JSON serialization.
+Includes:
+Getters and setters for all fields.
+File: Course.java (Model Class)
+Variables:
+private Long courseId;
+private String courseName;
+private String courseDescription;
+private int studentsEnrolled;
+private int lessonsCount;
+private Tutor tutor;
+Description:
+Represents a Course entity in the system.
+Implement proper primary key and auto increment on courseId.
+Establishes a Many-to-One relationship with Tutor:
+Multiple courses can be assigned to one tutor.
+Create a column with the name "tutor_id" using JoinColumn.
+Includes:
+Getters and setters for all fields.
+Repository Layer
+File: TutorRepository.java
+public interface TutorRepository extends JpaRepository<Tutor, Long>
+Description:
+Provides CRUD operations for Tutor entities.
+Includes a custom JPQL query to fetch tutors by tutor name:
+List<Tutor>findAllByTutorName(String tutorName)
+File: CourseRepository.java
+public interface CourseRepository extends JpaRepository<Course, Long>
+Description:
+Provides CRUD operations for Course entities.
+Includes a custom JPQL query to fetch courses by course name:
+List<Course>findAllByCourseName(String courseName);
+Service Layer
+File: TutorService.java
+Methods:
+public Tutor addTutor(Tutor tutor)
+Saves a new tutor into the database.
+Returns the saved Tutor entity.
+public List<Tutor>getAllTutors(String tutorName)
+Retrieves tutors based on tutor name.
+Note: Here you need to call the JPQL query method written in TutorRepository that returns tutors based on tutor name.
+public Tutor updateTutor(Long tutorId, Tutor tutor)
+Updates tutor details if tutor exists.
+Returns null if tutor ID is not found.
+public void deleteTutor(Long tutorId)
+Deletes tutor by ID.
+File: CourseService.java
+Methods:
+public Course addCourse(Course course)
+Saves a new course into the database.
+Returns the saved Course entity.
+public List<Course>getAllCourses(String courseName)
+Retrieves courses based on course name.
+Note: Here you need to call the JPQL query method written in CourseRepository that returns course based on course name.
+public Course updateCourse(Long courseId, Course course)
+Updates course details if course exists.
+Returns null if course ID is not found.
+Description:
+Contains business logic related to Course management.
+Uses CourseRepository internally.
+Controller Layer
+File: TutorController.java
+Base URL:
+/tutors
+Endpoints:
+Create Tutor
+POST /tutors
+Method Signature:
+public Tutor addTutor(@RequestBody Tutor tutor)
+Accepts tutor details in request body.
+Saves and returns the Tutor entity.
+Get Tutors by Name
+GET /tutors/{tutorName}
+Method Signature:
+public ResponseEntity<?>getAllTutors(@PathVariable String tutorName)
+Retrieves tutors by tutor name.
+Returns response body as tutor along with status code "ok".
+Update Tutor
+PUT /tutors/{tutorId}
+Method Signature:
+public Tutor updateTutor(@PathVariable Long tutorId, @RequestBody Tutor tutor)
+Updates tutor details based on tutor ID.
+Returns updated tutor.
+File: CourseController.java
+Base URL:
+/courses
+Endpoints:
+Create Course
+POST /courses
+Method Signature:
+public Course addCourse(@RequestBody Course course)
+Accepts course details in request body.
+Saves and returns the Course entity.
+Get Courses by Name
+GET /courses/{courseName}
+Method Signature:
+public ResponseEntity<?>getAllCourses(@PathVariable String courseName)
+Retrieves courses by course name.
+Returns response body as course along with status code "ok".
+Update Course
+PUT /courses/{courseId}
+Method Signature:
+public Course updateCourse(@PathVariable Long courseId, @RequestBody Course course)
+Updates course details if course exists.
+Returns updated course or null if not found.
+Notes
+Make sure to handle the relationship between entities correctly.
+Make sure you return the correct response as mentioned in the details section of the API.
+Make sure you implement the JPQL query in the CourseRepository as mentioned in the repository section.
