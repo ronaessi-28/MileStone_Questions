@@ -1,0 +1,351 @@
+package com.ltedutech;
+
+import java.util.ArrayList;
+import java.util.List;
+import java.util.Optional;
+
+import javax.persistence.Entity;
+import javax.persistence.GeneratedValue;
+import javax.persistence.GenerationType;
+import javax.persistence.Id;
+import javax.persistence.JoinColumn;
+import javax.persistence.ManyToOne;
+import javax.persistence.OneToMany;
+
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.boot.SpringApplication;
+import org.springframework.boot.autoconfigure.SpringBootApplication;
+import org.springframework.context.ConfigurableApplicationContext;
+import org.springframework.data.jpa.repository.JpaRepository;
+import org.springframework.data.jpa.repository.Query;
+import org.springframework.data.repository.query.Param;
+import org.springframework.http.HttpStatus;
+import org.springframework.http.ResponseEntity;
+import org.springframework.stereotype.Repository;
+import org.springframework.stereotype.Service;
+import org.springframework.web.bind.annotation.PathVariable;
+import org.springframework.web.bind.annotation.PostMapping;
+import org.springframework.web.bind.annotation.PutMapping;
+import org.springframework.web.bind.annotation.RequestBody;
+import org.springframework.web.bind.annotation.RestController;
+
+import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
+
+@SpringBootApplication
+public class ProjectApplication {
+
+    public static void main(String[] args) {
+        ConfigurableApplicationContext cxt = SpringApplication.run(ProjectApplication.class, args);
+
+        EmployeeRepo empRepo = cxt.getBean(EmployeeRepo.class);
+        DepartmentRepo deptRepo = cxt.getBean(DepartmentRepo.class);
+
+        Employee e1 = new Employee();
+        e1.setName("lpppppp");
+        e1.setSalary(2000000.0);
+        e1.setDesignation("kooooo");
+
+        Employee e2 = new Employee();
+        e2.setName("kgshha");
+        e2.setSalary(500000.0);
+        e2.setDesignation("oiuyt");
+
+        final Department d = new Department();
+        d.setCriteria("qwerty");
+        d.setDeptname("csert");
+        d.setNoOfEmployees(10); 
+
+        List<Employee> list = new ArrayList<>();
+        list.add(e2);
+        list.add(e1);
+
+        e1.setDepartment(d);
+        e2.setDepartment(d);
+
+        d.setEmployees(list);
+
+        deptRepo.save(d);
+        empRepo.save(e1);
+        empRepo.save(e2);
+
+        System.out.println(deptRepo.findByDeptName("asd").toString());
+    }
+}
+
+@Entity
+class Department {
+    @Id
+    @GeneratedValue(strategy = GenerationType.AUTO)
+    private int id;
+    private String deptname;
+    private String criteria;
+    private int noOfEmployees;
+
+    @OneToMany(mappedBy = "department")
+    @JsonIgnoreProperties("department")
+    private List<Employee> employees = new ArrayList<>();
+
+	public Department() {
+	}
+
+	public Department(int id, String deptname, String criteria, int noOfEmployees, List<Employee> employees) {
+		this.id = id;
+		this.deptname = deptname;
+		this.criteria = criteria;
+		this.noOfEmployees = noOfEmployees;
+		this.employees = employees;
+	}
+	
+
+
+	public Department(String deptname, String criteria, int noOfEmployees, List<Employee> employees) {
+		this.deptname = deptname;
+		this.criteria = criteria;
+		this.noOfEmployees = noOfEmployees;
+		this.employees = employees;
+	}
+
+	public int getId() {
+		return id;
+	}
+
+	public void setId(int id) {
+		this.id = id;
+	}
+
+	public String getDeptname() {
+		return deptname;
+	}
+
+	public void setDeptname(String deptname) {
+		this.deptname = deptname;
+	}
+
+	public String getCriteria() {
+		return criteria;
+	}
+
+	public void setCriteria(String criteria) {
+		this.criteria = criteria;
+	}
+
+	public int getNoOfEmployees() {
+		return noOfEmployees;
+	}
+
+	public void setNoOfEmployees(int noOfEmployees) {
+		this.noOfEmployees = noOfEmployees;
+	}
+
+	public List<Employee> getEmployees() {
+		return employees;
+	}
+
+	public void setEmployees(List<Employee> employees) {
+		this.employees = employees;
+	}
+	
+
+
+}
+
+@Entity
+class Employee {
+    @Id
+    @GeneratedValue(strategy = GenerationType.AUTO)
+    private int id;
+    private String name;
+    private String designation;
+    private Double salary;
+
+    @ManyToOne
+    @JoinColumn(name = "department_id")
+    @JsonIgnoreProperties("employees")
+    private Department department;
+
+    public Employee() {}
+
+    public Employee(String name, String designation, Double salary, Department department) {
+        this.name = name;
+        this.designation = designation;
+        this.salary = salary;
+        this.department = department;
+    }
+
+    public Employee(int id, String name, String designation, Double salary, Department department) {
+        this.id = id;
+        this.name = name;
+        this.designation = designation;
+        this.salary = salary;
+        this.department = department;
+    }
+
+    public int getId() {
+        return id;
+    }
+
+    public void setId(int id) {
+        this.id = id;
+    }
+
+    public String getName() {
+        return name;
+    }
+
+    public void setName(String name) {
+        this.name = name;
+    }
+
+    public String getDesignation() {
+        return designation;
+    }
+
+    public void setDesignation(String designation) {
+        this.designation = designation;
+    }
+
+    public Double getSalary() {
+        return salary;
+    }
+
+    public void setSalary(Double salary) {
+        this.salary = salary;
+    }
+
+    public Department getDepartment() {
+        return department;
+    }
+
+    public void setDepartment(Department department) {
+        this.department = department;
+    }
+
+    @Override
+    public String toString() {
+        return "Employee [id=" + id + ", name=" + name + ", designation=" + designation + ", salary=" + salary + "]";
+    }
+}
+
+@Repository
+interface DepartmentRepo extends JpaRepository<Department, Integer> {
+
+    @Query("select d.deptname, COUNT(e) from Department d JOIN d.employees e where d = :department group by d.deptname")
+    List<Object[]> countEmpByDeptName(@Param("department") Department department);
+
+    @Query("select e from Employee e join e.department d where d.deptname = :dname")
+    List<Employee> findByDeptName(@Param("dname") String dname);
+
+    Department findByNamee(String name);
+}
+
+@Repository
+interface EmployeeRepo extends JpaRepository<Employee, Integer> {
+    List<Employee> findByName(String name);
+}
+
+@Service
+class EmployeeService {
+    @Autowired
+    EmployeeRepo employeeRepo;
+
+    @Autowired
+    DepartmentRepo departmentRepo;
+
+    Employee saveEmployee(Employee employee) {
+        Department d = departmentRepo.findByNamee("helloviney");
+        employee.setDepartment(d);
+        employeeRepo.save(employee);
+        return employee;
+    }
+
+    void saveEmployee(Employee e, String deptName) {
+        Department dt = departmentRepo.findByNamee(deptName);
+        List<Employee> emps = employeeRepo.findByName(deptName);
+        emps.add(e);
+        dt.setEmployees(emps);
+    }
+
+    Employee updateEmployee(int id, Employee emp) {
+        Optional<Employee> found = employeeRepo.findById(id);
+        if (found.isPresent()) {
+            Employee e = found.get();
+            e.setDepartment(emp.getDepartment());
+            e.setDesignation(emp.getDesignation());
+            e.setName(emp.getName());
+            e.setSalary(emp.getSalary());
+            employeeRepo.save(e);
+            return e;
+        }
+        return null;
+    }
+}
+
+@Service
+class DepartmentService {
+    @Autowired
+    DepartmentRepo departmentRepo;
+
+    @Autowired
+    EmployeeRepo employeeRepo;
+
+    Department saveDepartment(Department dep) {
+		List<Employee> dd=employeeRepo.findByName(dep.getDeptname());
+		dep.setEmployees(dd);
+        return departmentRepo.save(dep);
+    }
+
+    void saveDepartment(Department d, List<Employee> employees) {
+        d.setEmployees(employees);
+    }
+
+    Department updateDepartment(int did, Department modDep) {
+        Optional<Department> dep = departmentRepo.findById(did);
+
+        if (dep.isPresent()) {
+            Department dd = dep.get();
+            dd.setCriteria(modDep.getCriteria());
+            dd.setDeptname(modDep.getDeptname());
+            dd.setEmployees(modDep.getEmployees());
+            dd.setNoOfEmployees(modDep.getNoOfEmployees());
+
+            departmentRepo.save(dd);
+            return dd;
+        }
+
+        return null;
+    }
+}
+
+@RestController
+class EmployeeController {
+    @Autowired
+    EmployeeService employeeService;
+
+    @PostMapping
+    public ResponseEntity<Employee> createEmployee(@RequestBody Employee employee) {
+        return new ResponseEntity<>(employeeService.saveEmployee(employee), HttpStatus.CREATED);
+    }
+
+    @PutMapping("/{id}")
+    public ResponseEntity<Employee> updateEmployee(@PathVariable int id, @RequestBody Employee e) {
+        Employee emp = employeeService.updateEmployee(id, e);
+        return new ResponseEntity<>(emp, HttpStatus.OK);
+    }
+}
+
+class DepartmentController {
+    @Autowired
+    DepartmentService departmentService;
+
+    @PostMapping
+    public ResponseEntity<Department> createDepartment(@RequestBody Department department) {
+        Department dd = departmentService.saveDepartment(department);
+        return new ResponseEntity<>(dd, HttpStatus.CREATED);
+    }
+
+    public ResponseEntity<Department> updateDepartment(@PathVariable int id, @RequestBody Department department) {
+        Department dd = departmentService.updateDepartment(id, department);
+        return new ResponseEntity<>(departmentService.updateDepartment(id, dd), HttpStatus.OK);
+    
+}
+}
